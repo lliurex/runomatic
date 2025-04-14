@@ -1,32 +1,39 @@
 #!/usr/bin/python3
 import sys
 import os
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QGridLayout,QComboBox
-from PySide2 import QtGui
-from PySide2.QtCore import Qt,Signal,QSignalMapper,QProcess,QEvent,QSize
-from appconfig.appConfigStack import appConfigStack as confStack
-from appconfig.appconfigControls import QHotkeyButton
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QGridLayout,QComboBox
+from PySide6 import QtGui
+from PySide6.QtCore import Qt,Signal,QSignalMapper,QProcess,QEvent,QSize
+#from appconfig.appConfigStack import appConfigStack as confStack
+from appconfig import manager
+from QtExtraWidgets import QStackedWindowItem
+from QtExtraWidgets import QHotkeyButton
+#from appconfig.appconfigControls import QHotkeyButton
 import gettext
 _ = gettext.gettext
 
-class keybinds(confStack):
+i18n={"LONGDESC":_("Keybind for launching configuration from Run-O-Matic"),
+	"MENU":_("Modify keybindings"),
+	"TOOLTIP":_("From here you can modify the keybinding")}
+class keybinds(QStackedWindowItem):
 	keybind_signal=Signal("PyObject")
 
 	def __init_stack__(self):
 		self.dbg=False
 		self._debug("confKeys Load")
-		self.menu_description=(_("Keybind for launching configuration from Run-O-Matic"))
-		self.description=(_("Modify keybindings"))
-		self.icon=('configure-shortcuts')
-		self.tooltip=(_("From here you can modify the keybinding"))
-		self.index=4
-		self.enabled=True
+		self.setProps(shortDesc=i18n["MENU"],
+			longDesc=i18n["LONGDESC"],
+			icon="configure-shortcuts",
+			tooltip=i18n["TOOLTIP"],
+			index=4,
+			visible=True)
 		self.keytext=''
 		self.keys={}
+		self.appconfig=manager.manager(name="runomatic.json",relativepath="runomatic")
 #		self._load_screen()
 	#def __init__
 	
-	def _load_screen(self):
+	def __initScreen__(self):
 		vbox=QVBoxLayout()
 		wdg=QWidget()
 		hbox=QGridLayout()
@@ -49,7 +56,10 @@ class keybinds(confStack):
 
 	def updateScreen(self):
 		self.force_change=False
-		config=self.getConfig()
+		config=self.appconfig.getConfig()
+		self.level="user"
+		if self.level not in config.keys():
+			config[self.level]={}
 		self.keytext=''
 		if config:
 			keybinds=config[self.level].get('keybinds',None)

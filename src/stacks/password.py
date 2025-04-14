@@ -1,29 +1,32 @@
 #!/usr/bin/python3
 import sys
 import os
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout
-from PySide2 import QtGui
-from PySide2.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout
+from PySide6 import QtGui
+from PySide6.QtCore import Qt
 from passlib.hash import pbkdf2_sha256 as hashpwd
-from appconfig.appConfigStack import appConfigStack as confStack
+#from appconfig.appConfigStack import appConfigStack as confStack
+from QtExtraWidgets import QStackedWindowItem
+from appconfig import manager
 import gettext
 _ = gettext.gettext
 
-class password(confStack):
+i18n={"MENU":_("Master password"),
+	"DESC":_("Set a master password"),
+	"TOOLTIP":_("The master password let the user close or configure runomatic")
+	}
+
+class password(QStackedWindowItem):
 	def __init_stack__(self):
 		self.dbg=False
-		self.txt_pass=QLineEdit()
-		self.txt_pass.setEchoMode(QLineEdit.Password)
-		self.txt_pass.setPlaceholderText(_("Password"))
-		self.txt_pass2=QLineEdit()
-		self.txt_pass2.setPlaceholderText(_("Repeat password"))
-		self.txt_pass2.setEchoMode(QLineEdit.Password)
-		self.menu_description=(_("Set a master password"))
-		self.description=(_("Set master password"))
+		self.setProps(shortDesc=i18n["MENU"],
+			longDesc=i18n["DESC"],
+			icon="document-new",
+			tooltip=_("Add custom repositories"),
+			index=5,
+			visible=True)
 		self.icon=('dialog-password')
-		self.tooltip=(_("From here you can set the master password"))
 		self.enabled=True
-		self.index=5
 		self.level='user'
 	
 	def _debug(self,msg):
@@ -31,7 +34,13 @@ class password(confStack):
 			print("ConfPass: %s"%msg)
 	#def _debug
 
-	def _load_screen(self):
+	def __initScreen__(self):
+		self.txt_pass=QLineEdit()
+		self.txt_pass.setEchoMode(QLineEdit.Password)
+		self.txt_pass.setPlaceholderText(_("Password"))
+		self.txt_pass2=QLineEdit()
+		self.txt_pass2.setPlaceholderText(_("Repeat password"))
+		self.txt_pass2.setEchoMode(QLineEdit.Password)
 		box=QVBoxLayout()
 		lbl_txt=QLabel(_("If a master password is set then the app will prompt for it to exit"))
 		lbl_txt.setAlignment(Qt.AlignTop)

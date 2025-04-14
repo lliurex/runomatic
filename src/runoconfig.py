@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 import sys
 import os,shutil
-from PySide2.QtWidgets import QApplication
-from appconfig.appConfigScreen import appConfigScreen as appConfig
+from PySide6.QtWidgets import QApplication
+from QtExtraWidgets import QStackedWindow
 
 oldUser="{}/.config/runomatic.conf".format(os.environ.get('HOME'))
 if os.path.isfile(oldUser):
@@ -13,18 +13,17 @@ if os.path.isfile(oldUser):
 		shutil.move(oldUser,newUser)
 
 app=QApplication(["Run-O-Matic"])
-config=appConfig("Runoconfig",{'app':app})
-config.setRsrcPath("/usr/share/runomatic/rsrc")
-config.setIcon('runomatic.svg')
-config.setWiki('https://wiki.edu.gva.es/lliurex/tiki-index.php?page=Runomatic')
-config.setBanner('banner.png')
-config.setBackgroundImage('background.png')
-config.setConfig(confDirs={'system':'/usr/share/runomatic','user':'%s/.config/runomatic'%os.environ['HOME']},confFile="runomatic.conf")
-config.Show()
-#config.setFixedSize(config.width(),config.height())
-
-app.exec_()
-#if len(sys.argv)>1:
-#	if os.path.isfile("/usr/bin/runomatic"):
-#		os.execv("/usr/bin/runomatic",["1"])
+config=QStackedWindow()
+if os.path.islink(__file__)==True:
+	abspath=os.path.join(os.path.dirname(__file__),os.path.dirname(os.readlink(__file__)))
+else:
+	abspath=os.path.dirname(__file__)
+config.addStacksFromFolder(os.path.join(abspath,"stacks"))
+config.setBanner("/usr/share/runoconfig/rsrc/runoconfig_banner.png")
+#config.setWiki("https://wiki.edu.gva.es/lliurex/tiki-index.php?page=Repoman-en-Lliurex-21")
+config.setIcon("runoconfig")
+config.show()
+config.setMinimumWidth(config.sizeHint().width()*1.6)
+config.setMinimumHeight(config.sizeHint().width()*0.9)
+app.exec()
 

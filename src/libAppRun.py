@@ -13,7 +13,7 @@ import tempfile
 import tarfile
 import shutil
 import psutil
-from appconfig.appConfig import appConfig 
+from appconfig.manager import manager as appConfig
 from app2menu import App2Menu
 QString=type("")
 
@@ -54,11 +54,18 @@ class th_runApp(QThread):
 	#def __del__
 
 	def _run_firefox(self):
+		env=os.environ
+		env["HOME"]="/home/%s"%self.username
+		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
+		env['DISPLAY']=display
+		env["XDG_SESSION_TYPE"]="x11"
+		env["WAYLAND_DISPLAY"]=""
 		newProfile=self.setFirefoxProfile()
 		#os.makedirs("/tmp/{}".format(newProfile))
 		#Create tmp profile
 		cmd=["firefox", "--no-remote","-CreateProfile", "{0} /tmp/{0}".format(newProfile)]
-		subprocess.run(cmd)
+		subprocess.run(["xhost","+"])
+		subprocess.run(cmd,env=env)
 		self.app=["firefox","--kiosk","-P",newProfile,"--private-window","--no-remote",self.app[-1]]
 		#self.app=["firefox","--kiosk","--profile",newProfile,"--private-window","--no-remote",self.app[-1]]
 		#self.app=["firefox","--new-window","--kiosk","--private-window",self.app[-1]]
@@ -90,7 +97,13 @@ class th_runApp(QThread):
 	#def _run_chromium
 
 	def _run_resource(self):
-		subprocess.run(["flash-java-insecure-perms","install"],stdin=None,stderr=None,stdout=None,shell=False)
+		env=os.environ
+		env["HOME"]="/home/%s"%self.username
+		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
+		env['DISPLAY']=display
+		env["XDG_SESSION_TYPE"]="x11"
+		env["WAYLAND_DISPLAY"]=""
+		subprocess.run(["flash-java-insecure-perms","install"],stdin=None,stderr=None,stdout=None,shell=False,env=env)
 		app=" ".join(self.app)
 		app=app.replace("/usr/bin/resources-launcher.sh",self.menu.get_default_app_for_file(app.split(" ")[-1]))
 		self.app=app.split(" ")
@@ -160,7 +173,7 @@ class th_runApp(QThread):
 
 class appRun():
 	def __init__(self):
-		self.dbg=False
+		self.dbg=True
 		exePath=sys.argv[0]
 		if os.path.islink(sys.argv[0]):
 			exePath=os.path.realpath(sys.argv[0])
@@ -172,19 +185,20 @@ class appRun():
 		self.pid=0
 		self.procMons=[]
 		self.deadProcesses=[]
-		self.confFile="runomatic.conf"
-		self.config=appConfig()
+		self.confFile="runomatic.json"
+		self.config=appConfig(name=self.confFile,relativepath="runomatic")
 		self.__init__config()
 		self.xephyr_servers={}
 		self.username=getpass.getuser()
 		self.main_display=os.environ['DISPLAY']
+		self.main_display=":1"
 		self.topBarHeight=116
 		self.categories={}
 		self.desktops={}
 		self.threads_pid={}
 		self.threads_tmp={}
-		self.level='system'
-		self.trueLevel='system'
+		self.level='user'
+		self.trueLevel='user'
 		self.menu=App2Menu.app2menu()
 		self.main_wid=0
 		self.ratpoisonConf=''
@@ -199,8 +213,9 @@ class appRun():
 		self.bg=bg
 
 	def __init__config(self):
-		self.config.set_baseDirs({'system':'/usr/share/runomatic','user':'%s/.config/runomatic'%os.environ['HOME']})
-		self.config.set_configFile(self.confFile)
+		return
+		#self.config.set_baseDirs({'system':'/usr/share/runomatic','user':'%s/.config/runomatic'%os.environ['HOME']})
+		#self.config.set_configFile(self.confFile)
 	#def __init__config
 
 	def set_topBarHeight(self,h):
@@ -214,6 +229,13 @@ class appRun():
 			self._debug("Search WID for server at display %s"%display)
 			self._debug("PID searched: %s"%self.xephyr_servers[display])
 			self._debug("User searched: %s"%self.username)
+			fakeEnv=os.environ
+			fakeEnv['XDG_CONFIG_DIRS']=NOLAUNCH
+			fakeEnv["XDG_SESSION_TYPE"]="x11"
+			fakeEnv["DISPLAY"]=":1"
+			fakeEnv["WAYLAND_DISPLAY"]=""
+			fakeEnv['WAY_CONFIG_DIRS']=NOLAUNCH
+			
 			while not wid and count<=100:
 				p_wid=self._run_cmd_on_display(["xdotool","search","--any","--name","%s %s"%(search,display)],self.main_display)
 				wid=p_wid.stdout.decode()
@@ -260,6 +282,8 @@ class appRun():
 				with open(runovncstartup,"w") as f:
 					f.write("#!/bin/bash\n")
 					f.write("unset DBUS_SESSION_BUS_ADDRESS\n")
+					f.write("unset WAYLAND_DISPLAY\n")
+					f.write("export DISPLAY=:1\n")
 					f.write("xeyes\n")
 				os.chmod(runovncstartup, stat.S_IXUSR | stat.S_IRUSR| stat.S_IWUSR | stat.S_IRGRP |stat.S_IROTH | stat.S_IROTH)
 				
@@ -288,6 +312,10 @@ class appRun():
 						pass
 				fakeEnv=os.environ
 				fakeEnv['XDG_CONFIG_DIRS']=NOLAUNCH
+				fakeEnv["XDG_SESSION_TYPE"]="x11"
+				fakeEnv["DISPLAY"]=":1"
+				fakeEnv["WAYLAND_DISPLAY"]=""
+				fakeEnv['WAY_CONFIG_DIRS']=NOLAUNCH
 				self._debug("VNC: {}".format(" ".join(vnc_cmd)))
 				subprocess.run(vnc_cmd,env=fakeEnv)
 
@@ -318,7 +346,9 @@ class appRun():
 ####!ADD TAB IF VINAGRE
 				#self._debug("UNMAP: %s"%self.main_wid)
 				fakeEnv=os.environ
-				fakeEnv['DISPLAY']=":0"
+				fakeEnv['DISPLAY']=":1"
+				fakeEnv['WAYLAND_DISPLAY']=""
+				fakeEnv["XDG_SESSION_TYPE"]="x11"
 				p_pid=subprocess.Popen(xephyr_cmd,stderr=subprocess.PIPE,stdout=subprocess.PIPE,env=fakeEnv)
 				th_comm=mp.Process(target=self._helper_th_communicate,args=(p_pid,))
 				th_comm.start()
@@ -342,6 +372,8 @@ class appRun():
 		env["HOME"]="/home/%s"%self.username
 		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
 		env['DISPLAY']=display
+		env["XDG_SESSION_TYPE"]="x11"
+		env['WAYLAND_DISPLAY']=""
 		self._debug("Running cmd on %s"%display)
 		self._debug("CMD %s"%cmd)
 		#prc=subprocess.run(cmd,stdout=subprocess.PIPE)
@@ -351,13 +383,20 @@ class appRun():
 
 	def stop_display(self,wid,display):
 		#if not wid:
-		windoWid=subprocess.run(["xdotool","getwindowfocus"],stdout=subprocess.PIPE)
 		env=os.environ
 		env["HOME"]="/home/%s"%self.username
 		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
-		env['DISPLAY']=":0"
+		env['DISPLAY']=display
+		env["XDG_SESSION_TYPE"]="x11"
+		env["DISPLAY"]=":1"
+		env['WAYLAND_DISPLAY']=""
+		windoWid=subprocess.run(["xdotool","getwindowfocus"],stdout=subprocess.PIPE,env=env)
+		env=os.environ
+		env["HOME"]="/home/%s"%self.username
+		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
+		env['DISPLAY']=":1"
 		if (windoWid.stdout):
-			widTree=subprocess.run(["xwininfo -tree -root"],shell=True,stdout=subprocess.PIPE)
+			widTree=subprocess.run(["xwininfo -tree -root"],shell=True,stdout=subprocess.PIPE,env=env)
 			hexWid=""
 			for widWindow in widTree.stdout.decode().split("\n"):
 				if "Xephyr on %s"%display in widWindow:
@@ -366,7 +405,7 @@ class appRun():
 		if wid:
 			self._debug("CLOSING WINDOW {}".format(wid))
 			try:
-				subprocess.run(["xdotool", "windowclose" ,"{}".format(wid)])
+				subprocess.run(["xdotool", "windowclose" ,"{}".format(wid)],env=env)
 			except:
 				pass
 		if display:
@@ -383,12 +422,16 @@ class appRun():
 		ps=list(psutil.process_iter())
 		count=0
 		for p in ps:
-			name=" ".join(p.cmdline())
-			if "Xephyr on {}".format(display) in name:
+			pid=0
+			try:
+				name=" ".join(p.cmdline())
+			except:
+				pid=p.pid
+			if "Xephyr on {}".format(display) in name or pid!=0:
 				pid=p.pid
 				self._debug("Killing Xephyr {}".format(pid))
 				p.kill()
-
+				subprocess.run(["killall","xeyes"])
 
 	def send_signal_to_thread(self,s_signal,thread):
 		self._debug("Send signal: %s to %s"%(s_signal,thread))
@@ -410,7 +453,7 @@ class appRun():
 			if (type(thread)==type(0)):
 				self._debug("Killing PID: %s"%thread)
 				try:
-					os.kill(thread,sig[s_signal])
+					#os.kill(thread,sig[s_signal])
 					retval=True
 				except Exception as e:
 					self._debug("%s failed on pid %s: %s"%(s_signal,thread,e))
@@ -476,14 +519,21 @@ class appRun():
 	#def getDeadProcesses
 
 	def _find_free_display(self,display=":13"):
+		env=os.environ
+		env["HOME"]="/home/%s"%self.username
+		#env["XAUTHORITY"]="/home/%s/.Xauthority"%self.username
+		env['DISPLAY']=display
+		env["XDG_SESSION_TYPE"]="x11"
+		env["DISPLAY"]=":1"
+		env["WAYLAND_DISPLAY"]=""
 		count=int(display.replace(":",""))
 		self._debug("Search %s"%count)
-		ret=subprocess.run(["xdpyinfo","-display",display],stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL).returncode
+		ret=subprocess.run(["xdpyinfo","-display",display],stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL,env=env).returncode
 		while (ret!=1):
 			count+=1
 			try:
 				display=":%s"%count
-				ret=subprocess.run(["xdpyinfo","-display",display],stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL).returncode
+				ret=subprocess.run(["xdpyinfo","-display",display],stderr=subprocess.DEVNULL,stdout=subprocess.DEVNULL,env=env).returncode
 			except Exception as e:
 				print ("Err: %s"%e)
 				display=":-1"
@@ -493,19 +543,23 @@ class appRun():
 
 	def get_default_config(self,exclude=[]):
 		data={}
-		data=self.config.getConfig('system',exclude=exclude)
-		level=data['system'].get('config','n4d')
+		data=self.config.getConfig()#'system',exclude=exclude)
+		level=data.get('system',{}).get('config','n4d')
+		level="user"
+		self.level=level
+		if len(data)==0:
+			data={"system":{},"user":{}}
 		self.trueLevel=level
-		if level=='user':
-			if os.path.isfile(os.path.join(os.environ['HOME'],".config","runomatic",self.confFile)):
-				data['system']['config']='user'
-			elif os.path.isfile("/usr/share/runomatic/runomatic.conf"):
-				self._debug("User config not available. Reading system config")
-				data['system']['config']='system'
-			else:
-				self._debug("User config not available. Reading n4d config")
-				data['system']['config']='n4d'
-		self.level=data['system']['config']
+		#if level=='user':
+		#	if os.path.isfile(os.path.join(os.environ['HOME'],".config","runomatic",self.confFile)):
+		#		data['system']['config']='user'
+		#	elif os.path.isfile("/usr/share/runomatic/runomatic.conf"):
+		#		self._debug("User config not available. Reading system config")
+		#		data['system']['config']='system'
+		#	else:
+		#		self._debug("User config not available. Reading n4d config")
+		#		data['system']['config']='n4d'
+		#self.level=data['system']['config']
 		self._debug("Read level from default config: %s"%self.level)
 		return (data)
 	#def get_config(self,level):
@@ -532,7 +586,7 @@ class appRun():
 			data=sysconfig.copy()
 		else:
 			self.config.changes=True
-			data=self.config.getConfig(self.level,exclude=['background64'])
+			data=self.config.getConfig()
 
 		self._debug("Read Data: %s"%data)
 		level=self.level
@@ -541,17 +595,21 @@ class appRun():
 				level='default'
 			else:
 				level=''
+		level="user"
 
 		if level:
 			self._debug("Read file %s"%level)
-			apps['hidden']=data[level].get('hidden',[])
-			apps['banned']=data[level].get('banned',[])
+			apps['hidden']=data.get('hidden',[])
+			apps['banned']=data.get('banned',[])
 			if categories==[] and load_categories:
-				apps['categories']=data[level].get('categories',[])
-				apps['desktops']=data[level].get('desktops',[])
+				apps['categories']=data.get('categories',[])
+				apps['desktops']=data.get('desktops',[])
 
 			self._debug("Readed %s"%apps)
 
+		print("****************")
+		print(categories)
+		print("****************")
 		if not apps['categories'] and not apps['desktops'] and load_categories:
 			apps=default
 		categories=apps.get('categories',[])
@@ -559,19 +617,21 @@ class appRun():
 		for runoapp in self.get_category_desktops("run-o-matic"):
 			runoapps[(os.path.basename(runoapp))]=runoapp
 		if 'run-o-matic' in categories:
-			self._generate_runodesktops(data[level].get('runotar',""))
+			self._generate_runodesktops(data.get(level,{}).get('runotar',""))
 
 		filteredApps=self._filter_category_apps(apps['categories'],apps['desktops'],apps['banned'],apps['hidden'],runoapps)
 		apps['desktops']=filteredApps.get('desktops',[])
 		apps['banned']=filteredApps.get('banned',[])
 		apps['hidden']=filteredApps.get('hidden',[])
 		self._debug("Banned; %s"%apps['banned'])
-		apps['keybinds']=data[level].get('keybinds')
-		apps['password']=data[level].get('password')
-		apps['close']=data[level].get('close')
-		apps['startup']=data[level].get('startup')
-		bg=data[level].get('background',"")
-		bg64=data[level].get('background64',"")
+		apps['keybinds']=data.get(level,{}).get('keybinds')
+		apps['password']=data.get(level,{}).get('password')
+		apps['close']=data.get(level,{}).get('close')
+		apps['startup']=data.get(level,{}).get('startup')
+		bg=data.get(level,{}).get('background',"")
+		bg64=data.get(level,{}).get('background64',"")
+		if level not in data.keys():
+			data[level]={}
 		data[level]['background']=self._fix_background_path(bg,bg64,level)
 		apps['background']=data[level].get('background')
 		return(apps)
@@ -624,8 +684,8 @@ class appRun():
 				imgName="%s/.config/runomatic/backgrounds/generic.png"%(os.environ['HOME'])
 			if not os.path.isfile(imgName):
 				if bg64=="":
-					dataBg=self.config.getConfig(level)
-					bg64=dataBg[level].get('background64',"")
+					dataBg=self.config.getConfig()
+					bg64=dataBg.get(level,{}).get('background64',"")
 				if bg64:
 					if not os.path.isdir("%s/.config/runomatic/backgrounds"%os.environ['HOME']):
 						os.makedirs("%s/.config/runomatic/backgrounds"%os.environ['HOME'])
@@ -693,5 +753,5 @@ class appRun():
 	#def get_desktop_app
 
 	def write_config(self,data,key=None,level=None):
-		self.config.write_config(data,level=level,key=key)
+		self.config.writeConfig(data)
 	#def write_config
