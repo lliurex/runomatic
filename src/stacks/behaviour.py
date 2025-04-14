@@ -2,30 +2,39 @@
 import sys
 import os
 import base64
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QComboBox,QCheckBox,QFileDialog
-from PySide2 import QtGui
-from PySide2.QtCore import Qt,QSize
-from appconfig.appConfigStack import appConfigStack as confStack
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QComboBox,QCheckBox,QFileDialog
+from PySide6 import QtGui
+from PySide6.QtCore import Qt,QSize
+#from appconfig.appConfigStack import appConfigStack as confStack
+from appconfig import manager
+from QtExtraWidgets import QStackedWindowItem
 
 import gettext
 _ = gettext.gettext
 
-class behaviour(confStack):
+i18n={"MENU":_("App behaviour"),
+	"DESC":_("Set app behaviour"),
+	"TOOLTIP":_("From here you can change background, start and exit options...")
+	}
+
+class behaviour(QStackedWindowItem):
 	def __init_stack__(self):
 		self.dbg=False
 		self._debug("confApp Load")
-		self.description=(_("App behaviour"))
-		self.menu_description=(_("Set app behaviour"))
-		self.icon=('dialog-password')
-		self.tooltip=(_("From here you can change background, start and exit options..."))
+		self.setProps(shortDesc=i18n["MENU"],
+			longDesc=i18n["DESC"],
+			icon="document-new",
+			tooltip=_("Add custom repositories"),
+			index=1,
+			visible=True)
 		self.bg="/usr/share/runomatic/rsrc/background2.png"
 		self.defaultBg="/usr/share/runomatic/rsrc/background2.png"
-		self.index=1
+		self.manager=manager.manager(name="runoconfig.json",relativepath="runoconfig")
 		self.enabled=True
-		self.level=''
+		self.level='user'
 	#def __init__
 	
-	def _load_screen(self):
+	def __initScreen__(self):
 		def _change_osh():
 			idx=self.cmb_level.currentIndex()
 			#if idx==0:
@@ -86,9 +95,9 @@ class behaviour(confStack):
 			level='system'
 		elif idx==2:
 			level='n4d'
-		config=self.getConfig(level)
+		config=self.manager.getConfig()
 		#Block close session if there's no keybind for config
-		keybind=config[level].get('keybinds',{}).get('conf','')
+		keybind=config.get(level,{}).get('keybinds',{}).get('conf','')
 		if keybind.strip()=="":
 			self.chk_close.setEnabled(False)
 			self.lbl_warning.setVisible(True)
@@ -108,7 +117,7 @@ class behaviour(confStack):
 			self.chk_close.setChecked(close)
 		except:
 			pass
-		startup=config[level].get('startup',False)
+		startup=config.get(level,{}).get('startup',False)
 		if startup:
 			if str(startup).lower()=='true':
 				startup=True
@@ -119,7 +128,7 @@ class behaviour(confStack):
 		except:
 			pass
 
-		self.bg=config[level].get('background',self.defaultBg)
+		self.bg=config.get(level,{}).get('background',self.defaultBg)
 		if os.path.isfile(self.bg):
 			icon=QtGui.QIcon(self.bg)
 			self.btn_img.setIcon(icon)
@@ -128,7 +137,8 @@ class behaviour(confStack):
 	def updateScreen(self):
 		self.refresh=True
 		self.changes=True
-		config=self.getConfig()
+		self.level="user"
+		config=self.manager.getConfig()
 		if self.level:
 			idx=0
 			if self.level.lower()=='system':
@@ -137,8 +147,10 @@ class behaviour(confStack):
 				idx=2
 			self.cmb_level.setCurrentIndex(idx)
 			self.cmb_level.activated.emit(idx)
+		if self.level not in config.keys():
+			config[self.level]={}
 		#Block close session if there's no keybind for config
-		keybind=config[self.level].get('keybinds',{}).get('conf','')
+		keybind=config.get(self.level,{}).get('keybinds',{}).get('conf','')
 		if keybind.strip()=="":
 			self.chk_close.setEnabled(False)
 			self.lbl_warning.setVisible(True)
@@ -153,24 +165,24 @@ class behaviour(confStack):
 			else:
 				close=False
 		self.chk_close.setChecked(close)
-		startup=config[self.level].get('startup',False)
+		startup=config.get(self.level,{}).get('startup',False)
 		if startup:
 			if str(startup).lower()=='true':
 				startup=True
 			else:
 				startup=False
 		self.chk_startup.setChecked(startup)
-		bg=config[self.level].get('background',self.defaultBg)
+		bg=config.get(self.level,{}).get('background',self.defaultBg)
 		if bg:
 			if not os.path.isfile(bg):
-				imgName=config[self.level].get('background',"generic.png")
+				imgName=config.get(self.level,{}).get('background',"generic.png")
 				bg="%s/.config/runomatic/backgrounds/%s"%(os.environ['HOME'],os.path.basename(imgName))
 				if not os.path.isfile(bg):
-					if config[self.level].get("background64"):
+					if config.get(self.level,{}).get("background64"):
 						if not os.path.isdir("%s/.config/runomatic/backgrounds"%os.environ['HOME']):
 							os.makedirs("%s/.config/runomatic/backgrounds"%os.environ['HOME'])
 						with open(bg,"wb") as f:
-							f.write(base64.decodebytes(config[self.level]['background64'].encode("utf-8")))
+							f.write(base64.decodebytes(config.get(self.level,{}).get('background64','').encode("utf-8")))
 				config[self.level]['background']=bg
 			icon=QtGui.QIcon(bg)
 			self.btn_img.setIcon(icon)

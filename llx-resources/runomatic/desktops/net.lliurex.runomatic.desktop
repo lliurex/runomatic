@@ -5,7 +5,7 @@ Name=Run-o-Matic
 Comment=Activity launcher for parental control
 Comment[es]=Lanzador de aplicaciones para control parental
 Comment[ca]=Llançador d'aplicacions per a control parental
-Exec=/usr/bin/runomatic
+Exec=XDG_SESSION_TYPE=x11 WAYLAND_DISPLAY="" DISPLAY=:1 /usr/bin/runomatic
 Icon=runomatic
 Type=Application
 GenericName=run-o-matic

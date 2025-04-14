@@ -2,12 +2,12 @@
 import getpass
 import sys
 import os,shutil
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QShortcut,\
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,\
 				QStackedWidget,QGridLayout,QTabBar,QTabWidget,QHBoxLayout,QFormLayout,QLineEdit,QComboBox,\
 				QStatusBar,QFileDialog,QDialog,QScrollBar,QScrollArea,QCheckBox,QTableWidget,\
-				QTableWidgetItem,QHeaderView,QTableWidgetSelectionRange,QInputDialog,QDesktopWidget
-from PySide2 import QtGui
-from PySide2.QtCore import QSize,Slot,Qt, QPropertyAnimation,QThread,QRect,QTimer,Signal,QSignalMapper,QProcess,QEvent
+				QTableWidgetItem,QHeaderView,QTableWidgetSelectionRange,QInputDialog
+from PySide6 import QtGui
+from PySide6.QtCore import QSize,Slot,Qt, QPropertyAnimation,QThread,QRect,QTimer,Signal,QSignalMapper,QProcess,QEvent
 from edupals.ui import QAnimatedStatusBar
 import gettext
 import subprocess
@@ -18,7 +18,6 @@ import time
 import tempfile
 from urllib.request import urlretrieve
 from libAppRun import appRun
-from appconfig.appConfigStack import appConfigStack as confStack
 from app2menu import App2Menu as app2menu
 QString=type("")
 QInt=type(0)
@@ -151,12 +150,12 @@ class navButton(QPushButton):
 			if isinstance(value, Qt.Key):
 				self.keymap[value]=key.partition('_')[2]
 		self.modmap={
-					Qt.ControlModifier: self.keymap[Qt.Key_Control],
-					Qt.AltModifier: self.keymap[Qt.Key_Alt],
-					Qt.ShiftModifier: self.keymap[Qt.Key_Shift],
-					Qt.MetaModifier: self.keymap[Qt.Key_Meta],
-					Qt.GroupSwitchModifier: self.keymap[Qt.Key_AltGr],
-					Qt.KeypadModifier: self.keymap[Qt.Key_NumLock]
+					Qt.ControlModifier: Qt.Key_Control,
+					Qt.AltModifier: Qt.Key_Alt,
+					Qt.ShiftModifier: Qt.Key_Shift,
+					Qt.MetaModifier: Qt.Key_Meta,
+					Qt.GroupSwitchModifier: Qt.Key_AltGr,
+					Qt.KeypadModifier: Qt.Key_NumLock
 					}
 		self.setObjectName("PushButton")
 	#def __init__
@@ -189,8 +188,8 @@ class navButton(QPushButton):
 				if sw_mod==True:
 					sw_mod=False
 				keypressed.append(key)
-			if sw_mod==False:
-				key=("+".join(keypressed))
+			#if sw_mod==False:
+			#	key=("+".join(keypressed))
 		if key not in ("Alt","Control","Super_L"):
 			self.keypress.emit(key)
 		else:
@@ -306,22 +305,31 @@ class runomatic(QWidget):
 	def _set_keymapping(self):
 		#Disable meta association within plasma. I've no eggs to capture and block this event in kde
 		for key,value in vars(Qt).items():
+			print(value)
 			if isinstance(value, Qt.Key):
 				self.keymap[value]=key.partition('_')[2]
 		self.modmap={
-					Qt.ControlModifier: self.keymap[Qt.Key_Control],
-					Qt.AltModifier: self.keymap[Qt.Key_Alt],
-					Qt.ShiftModifier: self.keymap[Qt.Key_Shift],
-					Qt.MetaModifier: self.keymap[Qt.Key_Meta],
-					Qt.GroupSwitchModifier: self.keymap[Qt.Key_AltGr],
-					Qt.KeypadModifier: self.keymap[Qt.Key_NumLock],
-					Qt.Key_Super_L: self.keymap[Qt.Key_Meta],
-					Qt.Key_Super_R: self.keymap[Qt.Key_Meta]
+					#Qt.ControlModifier: self.keymap[Qt.Key_Control],
+					#Qt.AltModifier: self.keymap[Qt.Key_Alt],
+					#Qt.ShiftModifier: self.keymap[Qt.Key_Shift],
+					#Qt.MetaModifier: self.keymap[Qt.Key_Meta],
+					#Qt.GroupSwitchModifier: self.keymap[Qt.Key_AltGr],
+					#Qt.KeypadModifier: self.keymap[Qt.Key_NumLock],
+					#Qt.Key_Super_L: self.keymap[Qt.Key_Meta],
+					#Qt.Key_Super_R: self.keymap[Qt.Key_Meta]
+					Qt.ControlModifier: Qt.Key_Control,
+					Qt.AltModifier: Qt.Key_Alt,
+					Qt.ShiftModifier: Qt.Key_Shift,
+					Qt.MetaModifier: Qt.Key_Meta,
+					Qt.GroupSwitchModifier: Qt.Key_AltGr,
+					Qt.KeypadModifier: Qt.Key_NumLock,
+					Qt.Key_Super_L: Qt.Key_Meta,
+					Qt.Key_Super_R: Qt.Key_Meta
 					}
 		self.sigmap_tabSelect=QSignalMapper(self)
-		self.sigmap_tabSelect.mapped[QInt].connect(self._on_tabSelect)
+		self.sigmap_tabSelect.mappedInt[QInt].connect(self._on_tabSelect)
 		self.sigmap_tabRemove=QSignalMapper(self)
-		self.sigmap_tabRemove.mapped[QInt].connect(self._on_tabRemove)
+		self.sigmap_tabRemove.mappedInt[QInt].connect(self._on_tabRemove)
 		#Shortcut for super_keys
 	#def _set_keymapping
 
@@ -487,7 +495,7 @@ class runomatic(QWidget):
 		dlg.exec_()
 
 	def _setTemplates(self,categories):
-		self.runner.write_config(categories,key='categories')
+		self.runner.write_config({"categories":categories})
 		os.execv("%s/runomatic.py"%self.baseDir,["1","2"])
 
 #	def _setTemplatesAndLaunch(self,categories):
@@ -659,7 +667,7 @@ class runomatic(QWidget):
 		row=int(len(self.appsWidgets)/self.maxCol)
 		col=(self.maxCol*(row+1))-len(self.appsWidgets)
 		sigmap_run=QSignalMapper(self)
-		sigmap_run.mapped[QString].connect(self._launch)
+		sigmap_run.mappedString.connect(self._launch)
 		for appName,data in apps.items():
 			appIcon=data['Icon']
 			appDesc=data['Name']
@@ -1026,5 +1034,5 @@ class runomatic(QWidget):
 
 app=QApplication(["Run-O-Matic"])
 runomaticLauncher=runomatic()
-app.exec_()
+app.exec()
 

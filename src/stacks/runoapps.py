@@ -1,15 +1,16 @@
 #!/usr/bin/python3
 import os
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,\
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,\
 				QDialog,QGridLayout,QHBoxLayout,QFormLayout,QLineEdit,QComboBox,\
 				QStatusBar,QFileDialog,QDialogButtonBox,QScrollBar,QScrollArea,QListWidget,\
 				QListWidgetItem,QStackedWidget,QButtonGroup,QComboBox,QTableWidget,QTableWidgetItem,\
-				QHeaderView,QMenu,QAction,QCompleter,QAbstractItemView
-from PySide2 import QtGui
-from PySide2.QtCore import QPoint,QSize,Slot,Qt, QPropertyAnimation,QThread,QRect,QTimer,Signal,QSignalMapper,QProcess,QEvent,QMimeData
+				QHeaderView,QMenu,QCompleter,QAbstractItemView
+from PySide6 import QtGui
+from PySide6.QtCore import QPoint,QSize,Slot,Qt, QPropertyAnimation,QThread,QRect,QTimer,Signal,QSignalMapper,QProcess,QEvent,QMimeData
 from libAppRun import appRun
 from app2menu import App2Menu
-from appconfig.appConfigStack import appConfigStack as confStack
+from appconfig.manager import manager
+from QtExtraWidgets import QStackedWindowItem
 import tempfile
 from urllib.request import urlretrieve
 import gettext
@@ -245,7 +246,12 @@ class dropButton(QPushButton):
 	#def clone
 #class dropButton
 
-class runoapps(confStack):
+i18n={"MENU":_("Configure launchers"),
+	"DESC":_("Set visible launchers"),
+	"TOOLTIP":_("Add custom launcher that will be shown in run-o-matic category")
+	}
+
+class runoapps(QStackedWindowItem):
 	dragdrop_signal=Signal("PyObject")
 	def __init_stack__(self,app=None):
 		self.dbg=False
@@ -265,11 +271,13 @@ class runoapps(confStack):
 		self.visible_categories=[]
 		self.menu=App2Menu.app2menu()
 		self.categories=[]
-		self.menu_description=(_("Configure visible launchers"))
-		self.description=(_("Modify launchers"))
+		self.setProps(shortDesc=i18n["MENU"],
+			longDesc=i18n["DESC"],
+			icon="edit-group",
+			tooltip=i18n["TOOLTIP"],
+			index=2,
+			visible=True)
 		self.icon=('edit-group')
-		self.tooltip=(_("Add custom launcher that will be shown in run-o-matic category"))
-		self.index=2
 		self.enabled=True
 		self.setStyleSheet(self._define_css())
 		self.runoapps="/usr/share/runomatic/applications"
@@ -305,7 +313,7 @@ class runoapps(confStack):
 		self.update_apps(apps)
 	#def updateScreen
 
-	def _load_screen(self):
+	def __initScreen__(self):
 		def _update_categories(cat):
 			if cat in self.visible_categories:
 				self.visible_categories.remove(cat)
@@ -334,7 +342,7 @@ class runoapps(confStack):
 		self.tbl_app.clear()
 		apps=self._update_apps_data()
 		sigmap_catSelect=QSignalMapper(self)
-		sigmap_catSelect.mapped[QString].connect(_update_categories)
+		sigmap_catSelect.mappedString.connect(_update_categories)
 		box=QVBoxLayout()
 		btnBox=QHBoxLayout()
 		btn_cat=QPushButton(_("Categories"))
@@ -342,7 +350,7 @@ class runoapps(confStack):
 		for cat in self._get_all_categories():
 			if not cat:
 				continue
-			act=QAction(cat,self.menu_cat)
+			act=QtGui.QAction(cat,self.menu_cat)
 			self.menu_cat.addAction(act)
 			if cat!="run-o-matic":
 				if len(self.menu.get_apps_from_menuentry(cat))<1:

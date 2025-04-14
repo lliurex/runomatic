@@ -6,12 +6,13 @@ import subprocess
 import tarfile
 import tempfile
 import base64
-from PySide2.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QGridLayout,QComboBox,QFileDialog
-from PySide2 import QtGui
-from PySide2.QtCore import Qt,Signal,QSignalMapper,QProcess,QEvent,QSize
+from PySide6.QtWidgets import QApplication, QLabel, QWidget, QPushButton,QVBoxLayout,QLineEdit,QHBoxLayout,QGridLayout,QComboBox,QFileDialog
+from PySide6 import QtGui
+from PySide6.QtCore import Qt,Signal,QSignalMapper,QProcess,QEvent,QSize
 from app2menu import App2Menu
 from libAppRun import appRun
-from appconfig.appConfigStack import appConfigStack as confStack
+#from appconfig.appConfigStack import appConfigStack as confStack
+from QtExtraWidgets import QStackedWindowItem
 from urllib.request import Request,urlopen,urlretrieve
 from bs4 import BeautifulSoup
 import re
@@ -19,15 +20,18 @@ import gettext
 _ = gettext.gettext
 
 
-i18n={"EXECUTABLE":_("Add executable"),
+i18n={"MENU":_("Add url/executable"),
+	"EXECUTABLE":_("Add executable"),
 	"EXEHOLDER":_("Executable path"),
 	"EXETOOLTIP":_("Insert the executable path"),
+	"LONGDESC":_("Add new launchers"),
+	"TOOLTIP":_("From here you can add a custom launcher"),
 	"URL":_("Add link"),
 	"URLTOOLTIP":_("Insert the url for the site"),
 	"URLHOLDER":_("https://example.com")
 }
 
-class launchers(confStack):
+class launchers(QStackedWindowItem):
 	def __init_stack__(self):
 		self.dbg=True
 		self._debug("confDesktops Load")
@@ -44,16 +48,21 @@ class launchers(confStack):
 		self.userRunoapps="%s/.config/runomatic/applications"%os.environ['HOME']
 		if not os.path.isdir(self.userRunoapps):
 			os.makedirs(self.userRunoapps)
+		self.dbg=False
+		self._debug("confRepos Load")
+		self.setProps(shortDesc=i18n["MENU"],
+			longDesc=i18n["LONGDESC"],
+			tooltip=i18n["TOOLTIP"],
+			icon='org.kde.plasma.quicklaunch',
+			index=3,
+			visible=True)
+		self.oldcursor=self.cursor()
+		self.level='user'
 		self.default_icon='shell'
 		self.app_icon='shell'
-		self.menu_description=(_("Add new launchers"))
-		self.description=(_("Add url/executable"))
-		self.icon=('org.kde.plasma.quicklaunch')
-		self.tooltip=(_("From here you can add a custom launcher"))
 		self.defaultName=""
 		self.defaultExec=""
 		self.defaultDesc=""
-		self.index=3
 		self.enabled=True
 		self.filename=""
 		self.level='user'
@@ -66,15 +75,12 @@ class launchers(confStack):
 			print("ConfDesktops: %s"%msg)
 	#def _debug
 
-	def initScreen(self):
+	def __initScreen__(self):
 		self.default_icon='shell'
 		self.defaultName=""
 		self.defaultExec=""
 		self.defaultDesc=""
 		self.filename=""
-	#def initScreen
-
-	def _load_screen(self):
 		box=QGridLayout()
 		lbl_name=QLabel(_("Name: "))
 		box.addWidget(lbl_name,0,0,1,1,Qt.AlignBottom)
@@ -131,6 +137,7 @@ class launchers(confStack):
 		box.setRowStretch(4,1)
 		box.setRowStretch(6,2)
 		self.setLayout(box)
+		return(self)
 	#def _load_screen
 
 	def _setUrlExe(self):
