@@ -1,3 +1,9 @@
+runomatic (1.5.9-lliurex25) noble; urgency=medium
+
+  * 
+
+ -- Juanma1980 <juanma1980@gmail.com>  Mon, 28 Jul 2025 10:36:40 +0200
+
 runomatic (1.5.4lliurex23) jammy; urgency=medium
 
   * Fix exception if copytree fails
